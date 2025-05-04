@@ -1,0 +1,164 @@
+:root {
+    --color-primary: #e0cab8;
+    --color-secondary: #fff8f2;
+    --color-text: #302126;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--color-secondary);
+    color: var(--color-text);
+}
+
+header {
+    background-color: var(--color-primary);
+    padding-top: 0px;
+    padding-bottom: 0px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.logo path:first-child {
+    fill: #010102;
+    transition: fill 300ms;
+}
+
+.logo:hover path:first-child {
+    fill: #494949;
+}
+
+.logo:last-child {
+    margin-right: 0;
+}
+
+nav ul {
+    display: flex;
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+nav li {
+    margin-left: 20px;
+}
+
+nav a {
+    text-decoration: none;
+    color: var(--color-text);
+}
+
+.content {
+    display: grid;
+    grid-gap: 30px;
+    padding: 30px;
+}
+
+.sidebar {
+    display: flex; /* Используем флексбокс для горизонтального расположения элементов */
+    flex-direction: row; /* Располагаем элементы в ряд */
+}
+
+.sidebar-1 {
+    position: relative;
+    margin-right: 20px; /* Отступ между пунктами меню */
+    padding: 10px;
+    text-decoration: none;
+    color: #333;
+}
+
+.sidebar-1:hover::before {
+    left: 0;
+    right: 0;
+    transition: right 300ms;
+}
+
+.sidebar-1::before {
+    background: rgba(0,0,0,.702);
+    bottom: 0;
+    content: "";
+    height: 1px;
+    left: 100%;
+    position: absolute;
+    right: 100%;
+    transition: right 0s 300ms, left 300ms;
+}
+
+.sidebar a {
+    display: block;
+    margin-bottom: 10px;
+    text-decoration: none;
+    color: var(--color-text);
+}
+
+.main-content {
+    padding: 20px;
+}
+
+.menu-items {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-right: 20px;
+    padding-top: 25px;
+    padding-bottom: 20px;
+}
+
+footer {
+    background-color: var(--color-primary);
+    padding: 20px;
+    text-align: center;
+}
+.product-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center; /* Центрирование */
+    gap: 20px; /* Промежуток между элементами */
+}
+
+.product-item {
+    flex: 0 1 calc(33.333% - 20px); /* Устанавливаем ширину в 1/3 с учетом промежутка */
+    box-sizing: border-box; /* Учитываем отступы и границы */
+    text-align: center; /* Центрируем текст */
+}
+
+.product-item img {
+    max-width: 100%; /* Адаптивное изображение */
+    height: auto; /* Сохраняем пропорции */
+}
+main {
+    padding: 20px;
+}
+
+.company-history, .founder, .established-year {
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.founder-info {
+    display: flex;
+    align-items: center;
+}
+
+.founder-photo {
+    width: 150px;
+    height: auto;
+    border-radius: 50%;
+    margin-right: 20px;
+}
+
+footer {
+    text-align: center;
+    padding: 10px;
+    background-color: #e3c6a9;
+}
