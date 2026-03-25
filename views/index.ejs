@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Кондитерская "Kriter"</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<style>
+  .menu-item {
+    flex: 0 1 calc(33.333% - 25px);
+    box-sizing: border-box;
+    text-align: center;
+  }
+  .menu-item img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 15px;
+  }
+  .popular-product {
+    margin: 20px 0;
+    padding: 20px;
+    background: #f9f5ec;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .order-count {
+    margin-top: 5px;
+    font-size: 0.8em;
+    color: #666;
+  }
+</style>
+<body>
+  <header>
+    <div class="logo">
+      <a href="/">
+        <img src="/img/logo.png" alt="логотип" width="140" height="140" />
+      </a>
+    </div>
+    <div class="sidebar">
+      <a class="sidebar-1" href="about.php">О нас</a>
+      <a class="sidebar-1" href="menu.php">Меню</a>
+      <a class="sidebar-1" href="cart.php">Корзина</a>
+      <a class="sidebar-1" href="cont.php">Контакты</a>
+      <a class="sidebar-1" href="order.php">Заказы</a>
+    </div>
+    <div class="nav">
+      <% if (user) { %>
+        <a href="account.php">Личный кабинет</a>
+      <% } else { %>
+        <a href="register.php">Авторизация</a>
+      <% } %>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="main-content">
+      <% if (popularProduct) { %>
+        <div class="popular-product">
+          <h2>Самый популярный продукт</h2>
+          <div class="menu-item">
+            <a href="menu.php">
+              <img src="<%= popularProduct.image_url %>" alt="<%= popularProduct.name %>" width="300" height="200">
+              <h3><%= popularProduct.name %></h3>
+            </a>
+            <p><%= popularProduct.description %></p>
+            <p class="order-count">Популярный выбор наших клиентов</p>
+          </div>
+        </div>
+      <% } %>
+
+      <h2>Специальные предложения</h2>
+      <div class="menu-items">
+        <% if (!specialOffers || specialOffers.length === 0) { %>
+          <p>Специальные предложения отсутствуют</p>
+        <% } else { %>
+          <% specialOffers.forEach(function(offer) { %>
+            <div class="menu-item">
+              <a href="menu.php">
+                <img src="<%= offer.image_url %>" alt="<%= offer.name %>" width="300" height="200">
+                <h3><%= offer.name %></h3>
+              </a>
+              <p><%= offer.description %></p>
+              <div class="price"><%= Number(offer.price).toFixed(2) %> руб.</div>
+            </div>
+          <% }); %>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2024 Кондитерская "Kriter"</p>
+  </footer>
+</body>
+</html>
