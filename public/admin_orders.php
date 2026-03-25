@@ -114,7 +114,13 @@ $stmt = $db->prepare(
      od.price
      FROM orders o
      LEFT JOIN order_details od ON o.number_order = od.number_order
-     ORDER BY o.number_order"
+     ORDER BY 
+        CASE 
+            WHEN o.status = 'Доставлен' THEN 1 
+            ELSE 0 
+        END,
+        o.delivery_date ASC,
+        o.delivery_time ASC"
 );
 $stmt->execute();
 $orders = $stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_ASSOC);
@@ -142,16 +148,36 @@ $orders = $stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_ASSOC);
             background-color: #f2f2f2;
         }
         .edit-button, .save-button, .delete-button, .get-button {
-            border: none;
-            padding: 5px 10px;
+            border: 1px solid rgba(48,33,38,.15);
+            padding: 6px 12px;
             cursor: pointer;
-            color: white;
+            color: var(--color-text);
+            background: rgba(255,255,255,.55);
+            border-radius: 8px;
+            transition: background-color .15s, border-color .15s;
         }
-        .edit-button { background-color: orange; }
-        .save-button { background-color: green; }
-        .delete-button { background-color: red; }
-        .get-button { background-color: blue; }
+        .edit-button { background-color: rgba(224,202,184,.35); }
+        .save-button { background-color: rgba(224,202,184,.35); }
+        .delete-button { background-color: rgba(244,67,54,.10); color: #7a1f1a; border-color: rgba(244,67,54,.25); }
+        .get-button { background-color: rgba(52,152,219,.10); color: #1f5f8d; border-color: rgba(52,152,219,.25); }
         .hidden { display: none; }
+
+        /* В "просмотре" disabled поля должны выглядеть как обычный текст */
+        input:disabled, select:disabled, textarea:disabled {
+            background-color: transparent;
+            border: none;
+            padding: 0;
+            margin: 0;
+            box-shadow: none;
+            width: auto;
+        }
+        textarea:disabled { resize: none; }
+
+        /* Статус: в режиме просмотра текст, в режиме редактирования select */
+        .status-text { display: inline; }
+        .status-select { display: none; }
+        .edit-mode .status-text { display: none; }
+        .edit-mode .status-select { display: inline-block; }
     </style>
     <script>
         function toggleEdit(orderNumber) {
@@ -164,6 +190,7 @@ $orders = $stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_ASSOC);
                 input.disabled = !input.disabled;
             });
 
+            orderRow.classList.toggle('edit-mode');
             editButton.classList.toggle('hidden');
             saveButton.classList.toggle('hidden');
         }
@@ -209,17 +236,17 @@ $orders = $stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_ASSOC);
 <body>
 <header>
     <div class="logo">
-        <a href="index.php"><img src="img/logo.png" alt="логотип" width="140" height="140" /></a>
+        <a href="index_admin.php"><img src="img/logo.png" alt="логотип" width="140" height="140" /></a>
     </div>
     <div class="sidebar">
         <a class="sidebar-1" href="admin_dashboard.php">Админ Меню</a>
-        <a class="sidebar-1" href="menu.php">Меню Клиента</a>
+        <a class="sidebar-1" href="menu_admin.php">Меню Клиента</a>
         <a class="sidebar-1" href="manage_users.php">Управление Пользователями</a>
         <a class="sidebar-1" href="admin_orders.php">Управление Заказами</a>
     </div>
     <div class="nav">
         <?php if (isset($_SESSION['admin_user'])): ?>
-            <a href="account.php">Личный кабинет</a>
+            <a href="admin_account.php">Личный кабинет</a>
         <?php else: ?>
             <a href="register.php">Авторизация</a>
         <?php endif; ?>
@@ -269,7 +296,8 @@ $orders = $stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_ASSOC);
                             <input type="time" name="delivery_time" value="<?= htmlspecialchars($first['delivery_time']) ?>" required disabled>
                         </td>
                         <td rowspan="<?= count($orderDetails) ?>">
-                            <select name="status" disabled>
+                            <span class="status-text"><?= htmlspecialchars($first['status']) ?></span>
+                            <select name="status" disabled class="status-select">
                                 <option value="Принят" <?= $first['status'] === 'Принят' ? 'selected' : '' ?>>Принят</option>
                                 <option value="Доставлен" <?= $first['status'] === 'Доставлен' ? 'selected' : '' ?>>Доставлен</option>
                             </select>

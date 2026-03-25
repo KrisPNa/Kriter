@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="ru">
 
@@ -8,6 +6,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Корзина</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        .quantity-input {
+            width: 60px;
+            text-align: center;
+        }
+        .update-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .remove-button {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .total-price {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <?php
 session_start();
@@ -19,8 +44,7 @@ $pdo = getDbConnection(); // Теперь у нас есть объект $pdo
 // Проверка авторизации
 if (!isset($_SESSION['user_id'])) {
     
-    echo "<p>Вы не авторизованы. Пожалуйста, выполните вход.</p>";
-    echo "<a href='register.php'>Войти</a>";
+    header('Location: register.php'); // Перенаправление на страницу авторизации
     exit();
 }
 
@@ -87,30 +111,107 @@ foreach ($cartItems as $item) {
             </thead>
             <tbody>
                 <?php foreach ($cartItems as $item): ?>
-                    <tr>
+                    <tr data-product-id="<?= $item['product_id'] ?>" data-price="<?= $item['price'] ?>">
                         <td><?= htmlspecialchars($item['name']) ?></td>
-                        <td><?= htmlspecialchars($item['price']) ?> руб.</td>
-                        <td><?= htmlspecialchars($item['quantity']) ?></td>
-                        <td><?= htmlspecialchars($item['price'] * $item['quantity']) ?> руб.</td>
+                        <td class="price"><?= number_format($item['price'], 2) ?> руб.</td>
                         <td>
-                            <form action="update_cart.php" method="post">
+                            <form action="update_cart.php" method="post" class="update-form">
                                 <input type="hidden" name="product_id" value="<?= $item['product_id'] ?>">
-                                <input type="number" name="quantity" value="<?= $item['quantity'] ?>" min="1">
-                                <button type="submit">Обновить</button>
+                                <input
+                                    type="number"
+                                    name="quantity"
+                                    value="<?= $item['quantity'] ?>"
+                                    min="1"
+                                    max="999"
+                                    class="quantity-input"
+                                >
+                                <button type="submit" class="update-button">Обновить</button>
                             </form>
+                        </td>
+                        <td class="item-total"><?= number_format($item['price'] * $item['quantity'], 2) ?> руб.</td>
+                        <td>
                             <form action="remove_from_cart.php" method="post">
                                 <input type="hidden" name="product_id" value="<?= $item['product_id'] ?>">
-                                <button type="submit">Удалить</button>
+                                <button type="submit" class="remove-button">Удалить</button>
                             </form>
                         </td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
-        <p><strong>Итого: <?= $totalPrice ?> руб.</strong></p>
+        <p class="total-price">Итого: <span id="total-price"><?= number_format($totalPrice, 2) ?></span> руб.</p>
         <a href="order_form.php" class="btn">Оформить заказ</a>
     <?php endif; ?>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function clampQuantity(input) {
+        if (input.value === '') return;
+        let value = parseInt(input.value, 10);
+        if (isNaN(value) || value < 1) value = 1;
+        if (value > 999) value = 999;
+        input.value = value;
+    }
+
+    function updateRowTotal(row) {
+        const price = parseFloat(row.dataset.price);
+        const quantityInput = row.querySelector('.quantity-input');
+        const quantity = parseInt(quantityInput.value, 10) || 0;
+        const itemTotalCell = row.querySelector('.item-total');
+        const total = price * quantity;
+        itemTotalCell.textContent = total.toFixed(2) + ' руб.';
+    }
+
+    function updateTotalPrice() {
+        let total = 0;
+        document.querySelectorAll('tr[data-product-id]').forEach(function (row) {
+            const price = parseFloat(row.dataset.price);
+            const quantityInput = row.querySelector('.quantity-input');
+            const quantity = parseInt(quantityInput.value, 10) || 0;
+            total += price * quantity;
+        });
+        const totalSpan = document.getElementById('total-price');
+        if (totalSpan) {
+            totalSpan.textContent = total.toFixed(2);
+        }
+    }
+
+    document.querySelectorAll('.update-form').forEach(function (form) {
+        const quantityInput = form.querySelector('.quantity-input');
+        const row = form.closest('tr');
+
+        if (!quantityInput || !row) return;
+
+        quantityInput.addEventListener('change', function () {
+            clampQuantity(quantityInput);
+            updateRowTotal(row);
+            updateTotalPrice();
+        });
+
+        form.addEventListener('submit', function (event) {
+            if (!window.fetch) {
+                return; // стандартная отправка формы (PHP всё обработает)
+            }
+
+            event.preventDefault();
+            clampQuantity(quantityInput);
+            updateRowTotal(row);
+            updateTotalPrice();
+
+            const formData = new FormData(form);
+
+            fetch('update_cart.php', {
+                method: 'POST',
+                body: formData
+            }).catch(function (error) {
+                console.error('Ошибка обновления корзины:', error);
+                form.submit(); // на всякий случай, если fetch не удался
+            });
+        });
+    });
+});
+</script>
 
 <footer>
     <p>&copy; 2023 Кондитерская "Kriter"</p>

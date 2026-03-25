@@ -145,15 +145,17 @@ foreach ($products as $product) {
             background-color: #c82333 !important;
         }
         .edit-button, .save-button, .delete-button {
-            padding: 5px 10px;
+            padding: 6px 12px;
             cursor: pointer;
-            color: white;
-            border: none;
-            border-radius: 4px;
+            color: var(--color-text);
+            border: 1px solid rgba(48,33,38,.15);
+            background: rgba(255,255,255,.55);
+            border-radius: 8px;
+            transition: background-color .15s, border-color .15s;
         }
-        .edit-button { background-color: orange; }
-        .save-button { background-color: green; }
-        .delete-button { background-color: red; }
+        .edit-button { background-color: rgba(224,202,184,.35); }
+        .save-button { background-color: rgba(224,202,184,.35); }
+        .delete-button { background-color: rgba(244,67,54,.10); color: #7a1f1a; border-color: rgba(244,67,54,.25); }
         .hidden { display: none; }
         input[type="text"], input[type="number"], textarea {
             width: 100%;
@@ -186,24 +188,32 @@ foreach ($products as $product) {
             margin: 2px;
         }
         .edit-button {
-            background-color: #4CAF50;
-            color: white;
+            background-color: rgba(224,202,184,.35);
+            color: var(--color-text);
         }
         .save-button {
-            background-color: #2196F3;
-            color: white;
+            background-color: rgba(224,202,184,.35);
+            color: var(--color-text);
         }
         .delete-button {
-            background-color: #f44336;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 5px 10px;
+            background-color: rgba(244,67,54,.10);
+            color: #7a1f1a;
+            border: 1px solid rgba(244,67,54,.25);
+            border-radius: 8px;
+            padding: 6px 12px;
             cursor: pointer;
         }
+        /* В режиме "просмотра" disabled-поля должны выглядеть как текст, а не как input */
         input:disabled, textarea:disabled {
-            background-color: #f5f5f5;
-            border: 1px solid #ddd;
+            background-color: transparent;
+            border: none;
+            padding: 0;
+            margin: 0;
+            box-shadow: none;
+            width: auto;
+        }
+        textarea:disabled {
+            resize: none;
         }
         .scroll-to-top {
             position: fixed;
@@ -233,17 +243,17 @@ foreach ($products as $product) {
 <body>
 <header>
     <div class="logo">
-        <a href="index.php"><img src="img/logo.png" alt="логотип" width="140" height="140" /></a>
+        <a href="index_admin.php"><img src="img/logo.png" alt="логотип" width="140" height="140" /></a>
     </div>
     <div class="sidebar">
         <a class="sidebar-1" href="admin_dashboard.php">Админ Меню</a>
-        <a class="sidebar-1" href="menu.php">Меню Клиента</a>
+        <a class="sidebar-1" href="menu_admin.php">Меню Клиента</a>
         <a class="sidebar-1" href="manage_users.php">Управление Пользователями</a>
         <a class="sidebar-1" href="admin_orders.php">Управление Заказами</a>
     </div>
     <div class="nav">
         <?php if (isset($_SESSION['admin_user'])): ?>
-            <a href="account.php">Личный кабинет</a>
+            <a href="admin_account.php">Личный кабинет</a>
         <?php else: ?>
             <a href="register.php">Авторизация</a>
         <?php endif; ?>

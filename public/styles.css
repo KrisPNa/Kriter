@@ -162,3 +162,74 @@ footer {
     padding: 10px;
     background-color: #e3c6a9;
 }
+
+/* Global soft button design (должно приглушать яркие цвета на всех страницах) */
+:root {
+    --btn-bg: rgba(224, 202, 184, 0.45);
+    --btn-bg-hover: rgba(224, 202, 184, 0.70);
+    --btn-border: rgba(48, 33, 38, 0.18);
+}
+
+button {
+    background-color: var(--btn-bg) !important;
+    color: var(--color-text) !important;
+    border: 1px solid var(--btn-border) !important;
+    border-radius: 10px !important;
+    padding: 8px 14px !important;
+    box-shadow: none !important;
+}
+
+button:hover {
+    background-color: var(--btn-bg-hover) !important;
+}
+
+/* Частные типы кнопок в админке */
+.edit-button,
+.save-button,
+.delete-button,
+.get-button,
+.cancel-button,
+.update-button,
+.remove-button {
+    color: var(--color-text) !important;
+    background-color: var(--btn-bg) !important;
+    border: 1px solid var(--btn-border) !important;
+}
+
+.delete-button {
+    background-color: rgba(244, 67, 54, 0.10) !important;
+    color: #7a1f1a !important;
+    border-color: rgba(244, 67, 54, 0.25) !important;
+}
+
+.reset-button {
+    background-color: var(--btn-bg) !important;
+    border-color: var(--btn-border) !important;
+    color: var(--color-text) !important;
+}
+
+.get-button,
+.add-product-button {
+    background-color: rgba(52, 152, 219, 0.10) !important;
+    color: #1f5f8d !important;
+    border-color: rgba(52, 152, 219, 0.25) !important;
+}
+
+/* Ссылки, которые визуально выглядят как кнопки */
+.category-button,
+.sort-buttons a,
+.reset-button,
+.nav-button,
+.add-product-button {
+    color: var(--color-text) !important;
+    background-color: var(--btn-bg) !important;
+    border-color: var(--btn-border) !important;
+    text-decoration: none !important;
+}
+
+.category-button:hover,
+.sort-buttons a:hover,
+.nav-button:hover,
+.add-product-button:hover {
+    background-color: var(--btn-bg-hover) !important;
+}

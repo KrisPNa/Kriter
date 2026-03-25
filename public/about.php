@@ -1,5 +1,26 @@
 <?php 
 session_start(); // Начинаем сессию
+require 'db.php'; // Подключаем файл с подключением к БД
+
+// Получаем данные о пекарнях из базы данных
+$pdo = getDbConnection();
+$stmt = $pdo->query('SELECT * FROM adress ORDER BY id_pecar');
+$bakeries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Функция для отображения звезд рейтинга
+function displayRating($rating) {
+    $fullStars = floor($rating);
+    $hasHalfStar = ($rating - $fullStars) >= 0.5;
+    $emptyStars = 5 - $fullStars - ($hasHalfStar ? 1 : 0);
+    
+    $stars = str_repeat('★', $fullStars);
+    if ($hasHalfStar) {
+        $stars .= '★';
+    }
+    $stars .= str_repeat('☆', $emptyStars);
+    
+    return $stars;
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -29,6 +50,55 @@ session_start(); // Начинаем сессию
           width: 300px; /* Ширина изображения */
           height: auto; /* Автоматическая высота */
           margin-left: 80px; /* Отступ между текстом и изображением */
+      }
+      .bakery-locations {
+          margin-top: 40px;
+          padding: 20px;
+          background-color: #f9f5ec;
+          border-radius: 15px;
+      }
+
+      .locations-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 20px;
+          margin-top: 20px;
+      }
+
+      .location-card {
+          background: white;
+          padding: 20px;
+          border-radius: 10px;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+          text-align: center;
+      }
+
+      .location-card h3 {
+          color: #333;
+          margin-bottom: 10px;
+      }
+
+      .location-card p {
+          color: #666;
+          margin-bottom: 15px;
+      }
+
+      .rating {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+      }
+
+      .stars {
+          color: #ffd700;
+          font-size: 1.2em;
+          letter-spacing: 2px;
+      }
+
+      .rating-value {
+          color: #333;
+          font-weight: bold;
       }
   </style>
 </head>
@@ -81,9 +151,28 @@ session_start(); // Начинаем сессию
             <h2>Год основания</h2>
             <p>2010 год</p>
         </section>
+
+        <section class="bakery-locations">
+            <h2>Наши пекарни в Минске</h2>
+            <div class="locations-grid">
+                <?php foreach ($bakeries as $bakery): ?>
+                <div class="location-card">
+                    <h3><?= htmlspecialchars($bakery['location_name']) ?></h3>
+                    <p><?= htmlspecialchars($bakery['location']) ?></p>
+                    <div class="rating">
+                        <span class="stars" title="Рейтинг: <?= $bakery['rating'] ?>">
+                            <?= displayRating($bakery['rating']) ?>
+                        </span>
+                        <span class="rating-value"><?= number_format($bakery['rating'], 1) ?></span>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
     </main>
     <footer>
         <p>&copy; 2024 Пекарня-кондитерская Kriter</p>
     </footer>
 </body>
+</html>
 </html>

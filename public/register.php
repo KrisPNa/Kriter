@@ -2,7 +2,7 @@
 session_start();
 
 // Определяем тип формы для отображения
-$formType = isset($_POST['form_type']) ? $_POST['form_type'] : 'user';
+$formType = $_POST['form_type'] ?? ($_GET['form_type'] ?? 'user');
 ?>
 
 <!DOCTYPE html>

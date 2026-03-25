@@ -179,7 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
             <a class="sidebar-1" href="order.php">Заказы</a>
         </div>
         <div class="nav">
-            <a href="logout.php">Выход</a>
+            <a href="logout.php" onclick="return confirm('Уверены, что хотите выйти?');">Выход</a>
         </div>
     </header>
 

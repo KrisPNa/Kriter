@@ -11,6 +11,17 @@ $userId = $_SESSION['user_id']; // ID пользователя из сессии
 
 $pdo = getDbConnection(); // Получаем соединение с базой данных
 
+// Автоматическое обновление статуса заказов
+$currentDateTime = new DateTime();
+$stmt = $pdo->prepare('
+    UPDATE orders 
+    SET status = "Доставлен" 
+    WHERE user_id = ? 
+    AND status != "Доставлен" 
+    AND CONCAT(delivery_date, " ", delivery_time) < ?
+');
+$stmt->execute([$userId, $currentDateTime->format('Y-m-d H:i:s')]);
+
 // Обработка обновления заказа
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order'])) {
     $orderNumber = $_POST['number_order'];
@@ -132,6 +143,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_order'])) {
     exit();
 }
 
+// Обработка отмены заказа
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'])) {
+    $orderNumber = $_POST['number_order'];
+    
+    // Проверяем время доставки
+    $stmt = $pdo->prepare('
+        SELECT delivery_date, delivery_time 
+        FROM orders 
+        WHERE number_order = ? AND user_id = ?
+    ');
+    $stmt->execute([$orderNumber, $userId]);
+    $orderTime = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($orderTime) {
+        $deliveryDateTime = new DateTime($orderTime['delivery_date'] . ' ' . $orderTime['delivery_time']);
+        $currentDateTime = new DateTime();
+        $timeDifference = $currentDateTime->diff($deliveryDateTime);
+        $hoursDifference = $timeDifference->h + ($timeDifference->days * 24);
+        
+        if ($hoursDifference <= 1) {
+            header('Location: order.php?error=time');
+            exit();
+        }
+        
+        // Начинаем транзакцию
+        $pdo->beginTransaction();
+        
+        try {
+            // Возвращаем товары в меню
+            $stmt = $pdo->prepare('
+                SELECT product_id, quantity 
+                FROM order_details 
+                WHERE number_order = ?
+            ');
+            $stmt->execute([$orderNumber]);
+            $orderItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($orderItems as $item) {
+                $stmt = $pdo->prepare('
+                    UPDATE menu 
+                    SET quantity = quantity + ? 
+                    WHERE product_id = ?
+                ');
+                $stmt->execute([$item['quantity'], $item['product_id']]);
+            }
+            
+            // Удаляем детали заказа
+            $stmt = $pdo->prepare('DELETE FROM order_details WHERE number_order = ?');
+            $stmt->execute([$orderNumber]);
+            
+            // Удаляем заказ
+            $stmt = $pdo->prepare('DELETE FROM orders WHERE number_order = ? AND user_id = ?');
+            $stmt->execute([$orderNumber, $userId]);
+            
+            $pdo->commit();
+            header('Location: order.php?success=cancel');
+            exit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            header('Location: order.php?error=db');
+            exit();
+        }
+    }
+}
+
 // Получаем все заказы пользователя, включая поле number_order
 $stmt = $pdo->prepare('
     SELECT number_order, delivery_date, delivery_time, addres_street, addres_house, addres_apt, status
@@ -147,6 +223,52 @@ $stmt = $pdo->prepare('
 ');
 $stmt->execute([$userId]);
 $orderInfo = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Получение заказа в текстовый файл
+if (isset($_GET['get'])) {
+    $orderNumber = (int)$_GET['get'];
+
+    // Получение данных по конкретному заказу
+    $stmt = $pdo->prepare("SELECT * FROM orders WHERE number_order = ? AND user_id = ?");
+    $stmt->execute([$orderNumber, $userId]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $stmt = $pdo->prepare("SELECT * FROM order_details WHERE number_order = ?");
+    $stmt->execute([$orderNumber]);
+    $orderDetails = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Проверка, существует ли заказ
+    if ($order) {
+        // Создаем содержимое файла
+        $content = "ID заказа: {$order['number_order']}\n";
+        $content .= "Имя: {$order['user_name']}\n";
+        $content .= "Адрес: {$order['addres_street']} {$order['addres_house']} {$order['addres_apt']}\n";
+        $content .= "Дата доставки: {$order['delivery_date']}\n";
+        $content .= "Время доставки: {$order['delivery_time']}\n";
+        $content .= "Статус: {$order['status']}\n";
+        $content .= "Общая стоимость: {$order['total_price']} руб.\n";
+        $content .= "Детали заказа:\n";
+
+        foreach ($orderDetails as $detail) {
+            $content .= " - {$detail['product_name']} - {$detail['quantity']} шт.\n";
+        }
+
+        // Устанавливаем заголовки для скачивания файла
+        header('Content-Type: text/plain; charset=utf-8');
+        header('Content-Disposition: attachment; filename="order_' . $order['number_order'] . '.txt"');
+        header('Content-Length: ' . strlen($content));
+        header('Cache-Control: no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        // Выводим содержимое файла
+        echo $content;
+        exit();
+    } else {
+        echo "Заказ не найден.";
+        exit();
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -193,22 +315,33 @@ $orderInfo = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .order-details p {
             margin: 10px 0;
         }
-    </style>
-    <script>
-        function toggleEdit(orderNumber) {
-            const form = document.querySelector(`form[data-order="${orderNumber}"]`);
-            const inputs = form.querySelectorAll('input[type="text"], input[type="date"], input[type="time"], input[type="number"]');
-            const editButton = form.querySelector('.edit-button');
-            const saveButton = form.querySelector('.save-button');
-            
-            inputs.forEach(input => {
-                input.disabled = !input.disabled;
-            });
-            
-            editButton.classList.toggle('hidden');
-            saveButton.classList.toggle('hidden');
+        .cancel-button {
+            background-color: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
         }
-    </script>
+        .cancel-button:hover {
+            background-color: #c82333;
+        }
+        .get-button {
+            background-color: #2196F3;
+            color: white;
+            padding: 8px 16px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .get-button:hover {
+            background-color: #1976D2;
+        }
+    </style>
 </head>
 
 <body>
@@ -291,9 +424,11 @@ $orderInfo = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             </div>
                             
                             <?php if ($order['status'] !== 'Доставлен'): ?>
-                                <button type="button" class="edit-button" onclick="toggleEdit(<?= htmlspecialchars($order['number_order']) ?>)">Изменить</button>
-                                <button type="submit" name="update_order" class="save-button hidden" id="save-button-<?= htmlspecialchars($order['number_order']) ?>">Сохранить</button>
+                                <button type="button" class="edit-button">Изменить</button>
+                                <button type="submit" name="update_order" class="save-button hidden">Сохранить</button>
                             <?php endif; ?>
+                            <button type="submit" name="cancel_order" class="cancel-button" value="<?= htmlspecialchars($order['number_order']) ?>">Отменить заказ</button>
+                            <button type="button" class="get-button" onclick="window.location.href='order.php?get=<?= htmlspecialchars($order['number_order']) ?>'">Скачать чек</button>
                         </form>
                     <?php else: ?>
                         <p>Товары не найдены для этого заказа.</p>
@@ -309,6 +444,62 @@ $orderInfo = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <p>У вас пока нет оформленных заказов.</p>
     <?php endif; ?>
     </main>
+
+    <?php if (isset($_GET['error'])): ?>
+        <div class="error-message" style="color: red; margin: 20px; padding: 15px; background-color: #ffebee; border-radius: 5px; border: 1px solid #ffcdd2;">
+            <?php
+            switch ($_GET['error']) {
+                case 'time':
+                    echo 'Невозможно отменить заказ, так как до времени доставки остался час или меньше. 
+                          Пожалуйста, свяжитесь с администратором для решения вопроса.';
+                    break;
+                case 'db':
+                    echo 'Произошла ошибка при отмене заказа. Пожалуйста, попробуйте позже.';
+                    break;
+            }
+            ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_GET['success']) && $_GET['success'] === 'cancel'): ?>
+        <div class="success-message" style="color: green; margin: 20px;">
+            Заказ успешно отменен.
+        </div>
+    <?php endif; ?>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.order-form').forEach(function (form) {
+            const inputs = form.querySelectorAll('input[type="text"], input[type="date"], input[type="time"], input[type="number"]');
+            const editButton = form.querySelector('.edit-button');
+            const saveButton = form.querySelector('.save-button');
+            const cancelButton = form.querySelector('.cancel-button');
+
+            if (editButton && saveButton) {
+                editButton.addEventListener('click', function () {
+                    inputs.forEach(function (input) {
+                        input.disabled = false;
+                    });
+                    editButton.classList.add('hidden');
+                    saveButton.classList.remove('hidden');
+                });
+            }
+
+            if (cancelButton) {
+                cancelButton.addEventListener('click', function (event) {
+                    if (!confirm('Вы уверены, что хотите отменить заказ?')) {
+                        event.preventDefault();
+                    } else {
+                        const numberInput = form.querySelector('input[name="number_order"]');
+                        if (numberInput) {
+                            numberInput.value = cancelButton.value;
+                        }
+                    }
+                });
+            }
+        });
+    });
+    </script>
 </body>
 
 </html>

@@ -5,6 +5,13 @@
 session_start(); // Начинаем сессию
 require 'db.php';
 
+// Проверка, авторизован ли администратор
+if (!isset($_SESSION['admin_user'])) {
+    header('Location: login.php'); // Перенаправление на страницу авторизации
+    exit();
+}
+
+
 // Получаем список товаров в корзине пользователя
 $cartItems = [];
 if (isset($_SESSION['user_id'])) {
@@ -18,6 +25,78 @@ if (isset($_SESSION['user_id'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Меню - Кондитерская "Kriter"</title>
     <link rel="stylesheet" href="styles.css">
+    <script>
+        // Функция для установки начального состояния кнопок
+        function initializeButtons() {
+            const buttons = document.querySelectorAll('button[onclick^="toggleButton"]');
+            const cartItems = <?php echo json_encode($cartItems); ?>;
+            
+            buttons.forEach(button => {
+                const productId = button.getAttribute('data-product-id');
+                if (cartItems.includes(parseInt(productId))) {
+                    button.textContent = "В корзине";
+                    button.style.backgroundColor = "#4CAF50";
+                }
+            });
+        }
+
+        // Вызываем функцию при загрузке страницы
+        document.addEventListener('DOMContentLoaded', initializeButtons);
+
+        function toggleButton(button, productId) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'add_to_cart.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+            if (button.textContent === "В корзину") {
+                        button.textContent = "В корзине";
+                        button.style.backgroundColor = "#4CAF50";
+            } else {
+                button.textContent = "В корзину";
+                        button.style.backgroundColor = "#e74c3c";
+                    }
+                }
+            };
+            
+            xhr.send('product_id=' + productId);
+        }
+
+        function validateSearchInput(input) {
+            // Удаляем специальные символы
+            let value = input.value.replace(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/g, '');
+            
+            // Заменяем множественные пробелы на один
+            value = value.replace(/\s+/g, ' ');
+            
+            // Удаляем пробел в начале строки
+            value = value.replace(/^\s+/, '');
+            
+            // Ограничиваем длину до 20 символов
+            value = value.substring(0, 20);
+            
+            // Обновляем значение поля
+            input.value = value;
+        }
+
+        function searchProduct() {
+            const searchInput = document.getElementById('searchInput');
+            const value = searchInput.value.trim();
+            
+            if (value.length > 0) {
+                window.location.href = `?search=${encodeURIComponent(value)}`;
+            }
+        }
+
+        function resetFilters() {
+            // Очищаем поле поиска
+            document.getElementById('searchInput').value = '';
+            
+            // Перенаправляем на страницу без параметров
+            window.location.href = 'menu.php';
+        }
+    </script>
     <style>
         .product-grid {
             display: flex;
@@ -167,74 +246,38 @@ if (isset($_SESSION['user_id'])) {
 <body>
 <header>
     <div class="logo">
-      <a href="index.php">
-        <img src="img/logo.png" alt="логотип" width="120" height="120" />
-      </a>
+        <a href="index_admin.php">
+            <img src="img/logo.png" alt="логотип" width="140" height="140" />
+        </a>
     </div>
     <div class="sidebar">
-      <a class="sidebar-1" href="about.php">О нас</a>
-      <a class="sidebar-1" href="menu.php">Меню</a>
-      <a class="sidebar-1" href="cart.php">Корзина</a>
-      <a class="sidebar-1" href="cont.php">Контакты</a>
-      <a class="sidebar-1" href="order.php">Заказы</a>
+        <a class="sidebar-1" href="admin_dashboard.php">Админ Меню</a>
+        <a class="sidebar-1" href="menu_admin.php">Меню Клиента</a>
+        <a class="sidebar-1" href="manage_users.php">Управление Пользователями</a>
+        <a class="sidebar-1" href="admin_orders.php">Управление Заказами</a>
     </div>
     <div class="nav">
-        <?php if (isset($_SESSION['user'])): ?>
-            <a href="account.php">Личный кабинет</a>
+        <?php if (isset($_SESSION['admin_user'])): ?>
+            <a href="admin_account.php">Личный кабинет</a>
         <?php else: ?>
             <a href="register.php">Авторизация</a>
         <?php endif; ?>
     </div>
-  </header>
-<!-- <header>
-    <div class="logo">
-      <a href="index.php">
-        <img src="img/logo.png" alt="логотип" width="140" height="140" />
-      </a>
-    </div>
-    <div class="sidebar">
-      <!-- Меню клиента -->
-      <!-- <?php if (isset($_SESSION['admin_user'])): ?> -->
-          <!-- <a class="sidebar-1" href="about.php">О нас</a>
-          <a class="sidebar-1" href="menu.php">Меню</a>
-          <a class="sidebar-1" href="cart.php">Корзина</a>
-          <a class="sidebar-1" href="cont.php">Контакты</a>
-          <a class="sidebar-1" href="order.php">Заказы</a>
-      <?php endif; ?> -->
-      
-      <!-- Меню администратора -->
-      <!-- <?php if (isset($_SESSION['admin_user'])): ?>
-          <a class="sidebar-1" href="admin_dashboard.php">Админ Меню</a>
-          <a class="sidebar-1" href="menu.php">Меню Клиента</a>
-          <a class="sidebar-1" href="manage_users.php">Управление Пользователями</a>
-          <a class="sidebar-1" href="admin_orders.php">Управление Заказами</a>
-      <?php endif; ?> -->
-    <!-- </div> -->
-    <!-- <div class="nav">
-        <?php if (isset($_SESSION['user'])): ?>
-            <a href="account.php">Личный кабинет</a>
-        <?php else: ?>
-            <a href="register.php">Авторизация</a>
-        <?php endif; ?>
-    </div> -->
-<!-- </header> -->
+</header>
 
 <div class="content">
     <h2>Наше меню</h2>
 
     <!-- Поле поиска -->
-    <form class="search-container" method="get" action="menu.php" id="searchForm">
-        <input
-            type="text"
-            id="searchInput"
-            name="search"
-            placeholder="Поиск по имени товара"
-            maxlength="20"
-            value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>"
-        >
-        <button type="submit" id="searchButton">Поиск</button>
-        <button type="button" id="resetButton" class="reset-button">Сбросить</button>
-    </form>
+    <div class="search-container">
+        <input type="text" id="searchInput" 
+               placeholder="Поиск по имени товара" 
+               maxlength="20"
+               oninput="validateSearchInput(this)"
+               onkeypress="if(event.key === 'Enter') searchProduct()">
+        <button onclick="searchProduct()">Поиск</button>
+        <button onclick="resetFilters()" class="reset-button">Сбросить</button>
+    </div>
 
     <!-- Навигация по категориям -->
     <div class="category-navigation">
@@ -253,14 +296,12 @@ if (isset($_SESSION['user_id'])) {
         $menu = $stmt->fetchAll(PDO::FETCH_ASSOC); // Получаем все результаты в виде массива
 
         // Проверяем наличие параметра поиска
-        $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
+        $searchTerm = isset($_GET['search']) ? $_GET['search'] : '';
 
-        // Фильтруем продукты по имени (без учёта регистра, с поддержкой кириллицы)
-        if ($searchTerm !== '') {
-            $searchLower = mb_strtolower($searchTerm, 'UTF-8');
-            $menu = array_filter($menu, function($product) use ($searchLower) {
-                $nameLower = mb_strtolower($product['name'], 'UTF-8');
-                return mb_strpos($nameLower, $searchLower, 0, 'UTF-8') !== false;
+        // Фильтруем продукты по имени
+        if ($searchTerm) {
+            $menu = array_filter($menu, function($product) use ($searchTerm) {
+                return stripos($product['name'], $searchTerm) !== false;
             });
         }
 
@@ -291,10 +332,7 @@ if (isset($_SESSION['user_id'])) {
                             <p><img src="<?php echo $product["image_url"]; ?>" alt="Торт"></p>
                             <p><?php echo $product["name"]; ?> - <strong><?php echo $product["price"]; ?> руб.</strong></p>
                             <p><?php echo $product["description"]; ?></p>
-                            <form method="post" action="add_to_cart.php" class="add-to-cart-form">
-                                <input type="hidden" name="product_id" value="<?= $product['product_id'] ?>">
-                                <button type="submit" data-product-id="<?= $product['product_id'] ?>">В корзину</button>
-                            </form>
+                            <button onclick="toggleButton(this, <?= $product['product_id'] ?>)" data-product-id="<?= $product['product_id'] ?>">В корзину</button>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -306,7 +344,7 @@ if (isset($_SESSION['user_id'])) {
         <a href="cart.php">Перейти в корзину</a>
     </div>
     
-    <button class="scroll-to-top" type="button"></button>
+    <button class="scroll-to-top" onclick="scrollToTop()"></button>
 </div>
 
 <footer>
@@ -314,86 +352,23 @@ if (isset($_SESSION['user_id'])) {
 </footer>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const cartItems = <?php echo json_encode($cartItems); ?>;
-
-    const searchInput = document.getElementById('searchInput');
-    const searchForm = document.getElementById('searchForm');
-    const resetButton = document.getElementById('resetButton');
-
-    function sanitizeSearch(value) {
-        value = value.replace(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/g, '');
-        value = value.replace(/\s+/g, ' ');
-        value = value.replace(/^\s+/, '');
-        return value.substring(0, 20);
-    }
-
-    if (searchInput && searchForm) {
-        searchInput.addEventListener('input', function () {
-            this.value = sanitizeSearch(this.value);
-        });
-
-        searchForm.addEventListener('submit', function () {
-            searchInput.value = sanitizeSearch(searchInput.value);
-        });
-    }
-
-    if (resetButton) {
-        resetButton.addEventListener('click', function () {
-            if (searchInput) searchInput.value = '';
-            window.location.href = 'menu.php';
-        });
-    }
-
-    document.querySelectorAll('.add-to-cart-form').forEach(function (form) {
-        const button = form.querySelector('button[type="submit"]');
-        if (!button) return;
-
-        const productId = parseInt(button.getAttribute('data-product-id'), 10);
-        if (cartItems.includes(productId)) {
-            button.textContent = 'В корзине';
-            button.style.backgroundColor = '#4CAF50';
+    // Показываем/скрываем кнопку при прокрутке
+    window.onscroll = function() {
+        const scrollButton = document.querySelector('.scroll-to-top');
+        if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+            scrollButton.style.display = "block";
+        } else {
+            scrollButton.style.display = "none";
         }
+    };
 
-        if (!window.fetch) {
-            return; // без JS‑улучшений форма всё равно работает
-        }
-
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-
-            const formData = new FormData(form);
-
-            fetch('add_to_cart.php', {
-                method: 'POST',
-                body: formData
-            }).then(function () {
-                button.textContent = 'В корзине';
-                button.style.backgroundColor = '#4CAF50';
-            }).catch(function () {
-                form.submit(); // запасной вариант
-            });
-        });
-    });
-
-    const scrollButton = document.querySelector('.scroll-to-top');
-    if (scrollButton) {
-        window.addEventListener('scroll', function () {
-            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
-                scrollButton.style.display = 'block';
-            } else {
-                scrollButton.style.display = 'none';
-            }
-        });
-
-        scrollButton.addEventListener('click', function () {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
+    // Функция плавной прокрутки вверх
+    function scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
         });
     }
-});
 </script>
 </body>
 </html>
